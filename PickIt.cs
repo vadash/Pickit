@@ -249,9 +249,6 @@ namespace PickIt
                 GameController.IngameState.UIHoverElement.Address == portalLabel.ItemOnGround.Address ||
                 GameController.IngameState.UIHoverElement.Address ==
                 portalLabel.Label.Address || // this is the right one
-                GameController.IngameState.UIHoverTooltip.Address == portalLabel.Address ||
-                GameController.IngameState.UIHoverTooltip.Address == portalLabel.ItemOnGround.Address ||
-                GameController.IngameState.UIHoverTooltip.Address == portalLabel.Label.Address ||
                 portalLabel?.ItemOnGround?.HasComponent<Targetable>() == true &&
                 portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted == true;
         }
