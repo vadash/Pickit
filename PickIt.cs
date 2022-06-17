@@ -8,7 +8,6 @@ using ExileCore;
 using ExileCore.PoEMemory.Components;
 using ExileCore.PoEMemory.Elements;
 using ExileCore.Shared;
-using ExileCore.Shared.Cache;
 using ExileCore.Shared.Helpers;
 using Random_Features.Libs;
 using SharpDX;
@@ -26,7 +25,6 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
     private readonly WaitTime _wait2Ms = new(2);
     private Vector2 _clickWindowOffset;
     private uint _coroutineCounter;
-    private TimeCache<List<CustomItem>> _currentLabels;
     private bool _enabled;
     private bool _fullWork = true;
     private Coroutine _pickItCoroutine;
@@ -34,7 +32,6 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
 
     public override bool Initialise()
     {
-        _currentLabels = new TimeCache<List<CustomItem>>(UpdateCurrentLabels, 250); // alexs idea <3
         #region Register keys
 
         Settings.PickUpKey.OnValueChanged += () => Input.RegisterKey(Settings.PickUpKey);
@@ -121,7 +118,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
         if (eventId == "end_pick_it") _enabled = false;
     }
 
-    private List<CustomItem> UpdateCurrentLabels()
+    private List<CustomItem> GetCurrentLabels()
     {
         var window = GameController.Window.GetWindowRectangleTimeCache;
         var rect = new RectangleF(window.X, window.X, window.X + window.Width, window.Y + window.Height);
@@ -145,7 +142,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
         var portalLabel = GetLabel(@"Metadata/MiscellaneousObjects/MultiplexPortal");
         var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
         rectangleOfGameWindow.Inflate(-36, -36);
-        var pickUpThisItem = _currentLabels.Value.FirstOrDefault(x =>
+        var pickUpThisItem = GetCurrentLabels().FirstOrDefault(x =>
             x.Distance < Settings.PickupRange && x.GroundItem != null &&
             rectangleOfGameWindow.Intersects(new RectangleF(x.LabelOnGround.Label.GetClientRectCache.Center.X,
                 x.LabelOnGround.Label.GetClientRectCache.Center.Y, 3, 3)));
@@ -238,14 +235,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
     }
 
     private bool IsPortalTargeted(LabelOnGround portalLabel) =>
-        GameController.IngameState.UIHover.Address == portalLabel.Address ||
-        GameController.IngameState.UIHover.Address == portalLabel.ItemOnGround.Address ||
-        GameController.IngameState.UIHover.Address == portalLabel.Label.Address ||
-        GameController.IngameState.UIHoverElement.Address == portalLabel.Address ||
-        GameController.IngameState.UIHoverElement.Address == portalLabel.ItemOnGround.Address ||
-        GameController.IngameState.UIHoverElement.Address == portalLabel.Label.Address || 
-        (portalLabel?.ItemOnGround?.HasComponent<Targetable>() == true &&
-         portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted == true);
+        GameController.IngameState.UIHoverElement.Address == portalLabel.Label.Address;
 
     private static bool IsPortalNearby(LabelOnGround portalLabel, LabelOnGround pickItItem)
     {
