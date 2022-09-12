@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Windows.Forms;
 using ExileCore;
@@ -210,17 +211,33 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
 
             if (pickItItem.IsTargeted())
             {
+                var click = false;
                 // in case of portal nearby do extra checks with delays
-                if (IsPortalNearby(portalLabel, pickItItem.LabelOnGround) && !IsPortalTargeted(portalLabel))
+                if (IsPortalNearby(portalLabel, pickItItem.LabelOnGround))
                 {
-                    yield return new WaitTime(25);
-                    if (IsPortalNearby(portalLabel, pickItItem.LabelOnGround) && !IsPortalTargeted(portalLabel))
-                        Input.Click(MouseButtons.Left);
+                    if (!IsPortalTargeted(portalLabel))
+                    {
+                        yield return new WaitTime(33);
+                        if (!IsPortalTargeted(portalLabel))
+                        {
+                            yield return new WaitTime(33);
+                            if (!IsPortalTargeted(portalLabel))
+                            {
+                                yield return new WaitTime(33);
+                                if (!IsPortalTargeted(portalLabel))
+                                {
+                                    click = true;
+                                }
+                            }
+                        }
+                    }
                 }
-                else if (!IsPortalNearby(portalLabel, pickItItem.LabelOnGround))
+                else
                 {
-                    Input.Click(MouseButtons.Left);
+                    click = true;
                 }
+
+                if (click) Input.Click(MouseButtons.Left);
             }
 
             yield return _toPick;
@@ -241,8 +258,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
         GameController.IngameState.UIHoverElement.Address == portalLabel.Address ||
         GameController.IngameState.UIHoverElement.Address == portalLabel.ItemOnGround.Address ||
         GameController.IngameState.UIHoverElement.Address == portalLabel.Label.Address || // right one
-        (portalLabel?.ItemOnGround?.HasComponent<Targetable>() == true &&
-         portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted == true);
+        portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted == true;
 
     private static bool IsPortalNearby(LabelOnGround portalLabel, LabelOnGround pickItItem)
     {
