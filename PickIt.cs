@@ -126,7 +126,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
             .Where(x => x.Address != 0
                         && x.ItemOnGround?.Path != null
                         && x.IsVisible
-                        && x.Label.GetClientRectCache.Center.PointInRectangle(rect)
+                        && x.Label.GetClientRect().Center.PointInRectangle(rect)
                         //&& x.CanPickUp // broken in 3.15
                         && x.MaxTimeForPickUp.TotalSeconds <= 0
             )
@@ -144,8 +144,8 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
         rectangleOfGameWindow.Inflate(-36, -36);
         var pickUpThisItem = GetCurrentLabels().FirstOrDefault(x =>
             x.Distance < Settings.PickupRange && x.GroundItem != null &&
-            rectangleOfGameWindow.Intersects(new RectangleF(x.LabelOnGround.Label.GetClientRectCache.Center.X,
-                x.LabelOnGround.Label.GetClientRectCache.Center.Y, 3, 3)));
+            rectangleOfGameWindow.Intersects(new RectangleF(x.LabelOnGround.Label.GetClientRect().Center.X,
+                x.LabelOnGround.Label.GetClientRect().Center.Y, 3, 3)));
         if (_enabled || Input.GetKeyState(Settings.PickUpKey.Value))
         {
             yield return TryToPickV2(pickUpThisItem, portalLabel);
@@ -162,7 +162,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
             yield break;
         }
 
-        var centerOfItemLabel = pickItItem.LabelOnGround.Label.GetClientRectCache.Center;
+        var centerOfItemLabel = pickItItem.LabelOnGround.Label.GetClientRect().Center;
         var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
 
         _clickWindowOffset = rectangleOfGameWindow.TopLeft;
@@ -233,15 +233,22 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
                    x => x.Address == pickItItem.LabelOnGround.Address) != null && tryCount < 6)
             tryCount++;
     }
-
+    
     private bool IsPortalTargeted(LabelOnGround portalLabel) =>
-        GameController.IngameState.UIHoverElement.Address == portalLabel.Label.Address;
+        GameController.IngameState.UIHover.Address == portalLabel.Address ||
+        GameController.IngameState.UIHover.Address == portalLabel.ItemOnGround.Address ||
+        GameController.IngameState.UIHover.Address == portalLabel.Label.Address ||
+        GameController.IngameState.UIHoverElement.Address == portalLabel.Address ||
+        GameController.IngameState.UIHoverElement.Address == portalLabel.ItemOnGround.Address ||
+        GameController.IngameState.UIHoverElement.Address == portalLabel.Label.Address || // right one
+        (portalLabel?.ItemOnGround?.HasComponent<Targetable>() == true &&
+         portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted == true);
 
     private static bool IsPortalNearby(LabelOnGround portalLabel, LabelOnGround pickItItem)
     {
         if (portalLabel == null || pickItItem == null) return false;
-        var rect1 = portalLabel.Label.GetClientRectCache;
-        var rect2 = pickItItem.Label.GetClientRectCache;
+        var rect1 = portalLabel.Label.GetClientRect();
+        var rect2 = pickItItem.Label.GetClientRect();
         rect1.Inflate(100, 100);
         rect2.Inflate(100, 100);
         return rect1.Intersects(rect2);
