@@ -29,7 +29,7 @@
             <HintPath>..\..\..\..\PoeHelper\ExileCore.dll</HintPath>
             <Private>False</Private>
         </Reference>
-        <Reference Include="ImGui.NET, Version=1.71.0.0, Culture=neutral, PublicKeyToken=null">
+        <Reference Include="ImGui.NET, Culture=neutral, PublicKeyToken=null">
             <HintPath>..\..\..\..\PoeHelper\ImGui.NET.dll</HintPath>
             <Private>False</Private>
         </Reference>
