@@ -162,10 +162,8 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
             //LogMessage("PickItem is not valid.", 5, Color.Red);
             yield break;
         }
-
         var centerOfItemLabel = pickItItem.LabelOnGround.Label.GetClientRect().Center;
         var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
-
         _clickWindowOffset = rectangleOfGameWindow.TopLeft;
         rectangleOfGameWindow.Inflate(-36, -36);
         centerOfItemLabel.X += rectangleOfGameWindow.Left;
@@ -176,13 +174,10 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
             //LogMessage($"Label outside game window. Label: {centerOfItemLabel} Window: {rectangleOfGameWindow}", 5, Color.Red);
             yield break;
         }
-
         var tryCount = 0;
-
         while (tryCount < 3)
         {
             var completeItemLabel = pickItItem.LabelOnGround?.Label;
-
             if (completeItemLabel == null)
             {
                 if (tryCount > 0)
@@ -192,74 +187,34 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
                 //LogError("Label for item not found.", 5);
                 yield break;
             }
-
             Vector2 vector2;
             if (IsPortalNearby(portalLabel, pickItItem.LabelOnGround))
                 vector2 = completeItemLabel.GetClientRect().ClickRandom() + _clickWindowOffset;
             else
                 vector2 = completeItemLabel.GetClientRect().Center + _clickWindowOffset;
-
             if (!rectangleOfGameWindow.Intersects(new RectangleF(vector2.X, vector2.Y, 3, 3)))
             {
                 _fullWork = true;
                 //LogMessage($"x,y outside game window. Label: {centerOfItemLabel} Window: {rectangleOfGameWindow}", 5, Color.Red);
                 yield break;
             }
-
             Input.SetCursorPos(vector2);
             yield return _wait2Ms;
-
-            if (pickItItem.IsTargeted())
+            if (portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted != true &&
+                GameController.Game.IngameState.IngameUi.ItemsOnGroundLabelsVisible.Any(label => label?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted != true))
             {
-                var click = false;
-                // in case of portal nearby do extra checks with delays
-                if (IsPortalNearby(portalLabel, pickItItem.LabelOnGround))
-                {
-                    if (!IsPortalTargeted(portalLabel))
-                    {
-                        yield return new WaitTime(33);
-                        if (!IsPortalTargeted(portalLabel))
-                        {
-                            yield return new WaitTime(33);
-                            if (!IsPortalTargeted(portalLabel))
-                            {
-                                yield return new WaitTime(33);
-                                if (!IsPortalTargeted(portalLabel))
-                                {
-                                    click = true;
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    click = true;
-                }
-
-                if (click) Input.Click(MouseButtons.Left);
+                Input.Click(MouseButtons.Left);
             }
-
             yield return _toPick;
             tryCount++;
         }
-
         tryCount = 0;
-
-        while (GameController.Game.IngameState.IngameUi.ItemsOnGroundLabelsVisible.FirstOrDefault(
-                   x => x.Address == pickItItem.LabelOnGround.Address) != null && tryCount < 6)
+        while (GameController.Game.IngameState.IngameUi.ItemsOnGroundLabelsVisible.FirstOrDefault(x => x.Address == pickItItem.LabelOnGround.Address) != null && tryCount < 6)
+        {
             tryCount++;
+        }
     }
     
-    private bool IsPortalTargeted(LabelOnGround portalLabel) =>
-        GameController.IngameState.UIHover.Address == portalLabel.Address ||
-        GameController.IngameState.UIHover.Address == portalLabel.ItemOnGround.Address ||
-        GameController.IngameState.UIHover.Address == portalLabel.Label.Address ||
-        GameController.IngameState.UIHoverElement.Address == portalLabel.Address ||
-        GameController.IngameState.UIHoverElement.Address == portalLabel.ItemOnGround.Address ||
-        GameController.IngameState.UIHoverElement.Address == portalLabel.Label.Address || // right one
-        portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted == true;
-
     private static bool IsPortalNearby(LabelOnGround portalLabel, LabelOnGround pickItItem)
     {
         if (portalLabel == null || pickItItem == null) return false;
