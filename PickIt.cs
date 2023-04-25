@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Windows.Forms;
 using ExileCore;
@@ -13,6 +12,7 @@ using ExileCore.Shared.Helpers;
 using Random_Features.Libs;
 using SharpDX;
 using nuVector2 = System.Numerics.Vector2;
+#pragma warning disable CS0612
 
 // ReSharper disable ConstantConditionalAccessQualifier
 
@@ -22,8 +22,6 @@ namespace PickIt;
 public class PickIt : BaseSettingsPlugin<PickItSettings>
 {
     private readonly Stopwatch _debugTimer = Stopwatch.StartNew();
-    private readonly WaitTime _toPick = new(1);
-    private readonly WaitTime _wait2Ms = new(2);
     private Vector2 _clickWindowOffset;
     private uint _coroutineCounter;
     private bool _enabled;
@@ -63,12 +61,9 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
 
     public override void DrawSettings()
     {
-        Settings.PickUpKey =
-            ImGuiExtension.HotkeySelector("Pickup Key: " + Settings.PickUpKey.Value, Settings.PickUpKey);
+        Settings.PickUpKey = ImGuiExtension.HotkeySelector("Pickup Key: " + Settings.PickUpKey.Value, Settings.PickUpKey);
         Settings.PickupRange.Value = ImGuiExtension.IntSlider("Pickup Radius", Settings.PickupRange);
         Settings.ExtraDelay.Value = ImGuiExtension.IntSlider("Extra Click Delay", Settings.ExtraDelay);
-        Settings.TimeBeforeNewClick.Value =
-            ImGuiExtension.IntSlider("Time wait for new click", Settings.TimeBeforeNewClick);
     }
 
     public override Job Tick()
@@ -128,7 +123,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
                         && x.ItemOnGround?.Path != null
                         && x.IsVisible
                         && x.Label.GetClientRect().Center.PointInRectangle(rect)
-                        //&& x.CanPickUp // broken in 3.15
+                        && x.CanPickUp
                         && x.MaxTimeForPickUp.TotalSeconds <= 0
             )
             .Select(x => new CustomItem(x,
@@ -187,11 +182,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
                 //LogError("Label for item not found.", 5);
                 yield break;
             }
-            Vector2 vector2;
-            if (IsPortalNearby(portalLabel, pickItItem.LabelOnGround))
-                vector2 = completeItemLabel.GetClientRect().ClickRandom() + _clickWindowOffset;
-            else
-                vector2 = completeItemLabel.GetClientRect().Center + _clickWindowOffset;
+            var vector2 = completeItemLabel.GetClientRect().Center + _clickWindowOffset;
             if (!rectangleOfGameWindow.Intersects(new RectangleF(vector2.X, vector2.Y, 3, 3)))
             {
                 _fullWork = true;
@@ -199,13 +190,11 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
                 yield break;
             }
             Input.SetCursorPos(vector2);
-            yield return _wait2Ms;
             if (portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted != true &&
                 GameController.Game.IngameState.IngameUi.ItemsOnGroundLabelsVisible.Any(label => label?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted != true))
             {
                 Input.Click(MouseButtons.Left);
             }
-            yield return _toPick;
             tryCount++;
         }
         tryCount = 0;
@@ -215,16 +204,6 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
         }
     }
     
-    private static bool IsPortalNearby(LabelOnGround portalLabel, LabelOnGround pickItItem)
-    {
-        if (portalLabel == null || pickItItem == null) return false;
-        var rect1 = portalLabel.Label.GetClientRect();
-        var rect2 = pickItItem.Label.GetClientRect();
-        rect1.Inflate(100, 100);
-        rect2.Inflate(100, 100);
-        return rect1.Intersects(rect2);
-    }
-
     private LabelOnGround GetLabel(string id)
     {
         var labels = GameController?.Game?.IngameState?.IngameUi?.ItemsOnGroundLabels;
