@@ -140,8 +140,8 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
         rectangleOfGameWindow.Inflate(-36, -36);
         var pickUpThisItem = GetCurrentLabels().FirstOrDefault(x =>
             x.Distance < Settings.PickupRange && x.GroundItem != null &&
-            rectangleOfGameWindow.Intersects(new RectangleF(x.LabelOnGround.Label.GetClientRect().Center.X,
-                x.LabelOnGround.Label.GetClientRect().Center.Y, 3, 3)));
+            !LabelsIntersect(x?.LabelOnGround, portalLabel) &&
+            rectangleOfGameWindow.Intersects(new RectangleF(x.LabelOnGround.Label.GetClientRect().Center.X, x.LabelOnGround.Label.GetClientRect().Center.Y, 3, 3)));
         if (_enabled || Input.GetKeyState(Settings.PickUpKey.Value))
         {
             yield return TryToPickV2(pickUpThisItem, portalLabel);
@@ -190,8 +190,7 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
                 yield break;
             }
             Input.SetCursorPos(vector2);
-            if (portalLabel?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted != true &&
-                GameController.Game.IngameState.IngameUi.ItemsOnGroundLabelsVisible.Any(label => label?.ItemOnGround?.GetComponent<Targetable>()?.isTargeted != true))
+            if (portalLabel?.Label?.IndexInParent != 0) // portal is not selected check
             {
                 Input.Click(MouseButtons.Left);
             }
@@ -203,7 +202,17 @@ public class PickIt : BaseSettingsPlugin<PickItSettings>
             tryCount++;
         }
     }
-    
+
+    private static bool LabelsIntersect(LabelOnGround labelA, LabelOnGround labelB, int inflateSize = 3)
+    {
+        if (labelA == null || labelB == null) return false;
+        var rect1 = labelA.Label.GetClientRect();
+        var rect2 = labelB.Label.GetClientRect();
+        rect1.Inflate(inflateSize, inflateSize);
+        rect2.Inflate(inflateSize, inflateSize);
+        return rect1.Intersects(rect2);
+    }
+
     private LabelOnGround GetLabel(string id)
     {
         var labels = GameController?.Game?.IngameState?.IngameUi?.ItemsOnGroundLabels;
